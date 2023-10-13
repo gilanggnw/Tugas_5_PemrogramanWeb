@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cuaca Surabaya</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="text-center">Perkiraan Cuaca</h1>
+        <div class="text-center">
+            <button class="btn btn-primary" type="button" onclick="loadWeatherData()">Click</button>
+        </div>
+        <div id="weatherData" class="mt-4"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
+
+    <script>
+    function loadWeatherData() {
+        const url = "https://data.bmkg.go.id/DataMKG/MEWS/DigitalForecast/DigitalForecast-JawaTimur.xml";
+        const weatherDataElement = document.getElementById("weatherData");
+
+        fetch(url)
+            .then(response => response.text())
+            .then(data => {
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(data, "text/xml");
+                const areaName = "Surabaya";
+                
+                // Use XPath to select the area with the specified description
+                const areaElement = xmlDoc.evaluate(`/data/forecast/area[@description="${areaName}"]`, xmlDoc, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+
+                if (areaElement) {
+                    const weatherIconNodeList = xmlDoc.evaluate('.//parameter[id="weather"]/timerange/value[unit="icon"]', areaElement, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
+
+                    let weatherDataHtml = `<h2>Weather Forecast for ${areaName}</h2><ul>`;
+
+                    for (let i = 0; i < weatherIconNodeList.snapshotLength; i++) {
+                        const weatherIcon = weatherIconNodeList.snapshotItem(i).textContent;
+                        const formattedDatetime = formatDatetime(weatherIconNodeList.snapshotItem(i).parentNode.getAttribute('datetime'));
+                        const weatherDescription = mapWeatherIconToDescription(weatherIcon);
+
+                        weatherDataHtml += `<li>Date and Time: ${formattedDatetime}, Weather: ${weatherDescription}</li>`;
+                    }
+
+                    weatherDataHtml += '</ul>';
+                    weatherDataElement.innerHTML = weatherDataHtml;
+                } else {
+                    weatherDataElement.innerHTML = `<p>No data available for ${areaName}.</p>`;
+                }
+            })
+            .catch(error => {
+                console.error("Error loading data:", error);
+            });
+    }
+
+
+    function formatDatetime(datetime) {
+        const year = datetime.slice(0, 4);
+        const month = datetime.slice(4, 6);
+        const day = datetime.slice(6, 8);
+        const hour = datetime.slice(8, 10);
+        const minute = datetime.slice(10, 12);
+        return `${year}/${month}/${day} ${hour}:${minute}`;
+    }
+
+    function mapWeatherIconToDescription(weatherIcon) {
+        switch(weatherIcon) {
+            case '0': return 'Cerah';
+            case '1': return 'Cerah Berawan';
+            case '2': return 'Cerah Berawan';
+            case '3': return 'Berawan';
+            case '4': return 'Berawan Tebal';
+            case '5': return 'Udara Kabur';
+            case '10': return 'Asap';
+            case '45': return 'Kabut';
+            case '60': return 'Hujan Ringan';
+            case '61': return 'Hujan Sedang';
+            case '63': return 'Hujan Lebat';
+            case '80': return 'Hujan Lokal';
+            case '95': return 'Hujan Petir';
+            case '97': return 'Hujan Petir';
+            default: return 'Unknown';
+        }
+    }
+    </script>
+
+</body>
+</html>
